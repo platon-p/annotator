@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>annotator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header>
+  <strong id="file"></strong>
+  <span id="count" class="muted"></span>
+  <span class="spacer"></span>
+  <button id="btn-help" title="Shortcuts">? help</button>
+  <button id="btn-discard" title="Shift+Q">Discard</button>
+  <button id="btn-finish" class="primary" title="Cmd/Ctrl+Enter">Finish <kbd>⌘↵</kbd></button>
+</header>
+<div id="layout">
+  <nav id="outline"><h3>Outline</h3><ul id="toc"></ul></nav>
+  <main id="docwrap"><article id="doc"></article><div id="caret" hidden></div></main>
+  <aside id="side"><h3>Annotations</h3><ol id="list"></ol></aside>
+</div>
+<footer id="bar"></footer>
+<div id="composer" hidden>
+  <blockquote id="c-quote"></blockquote>
+  <textarea id="c-text" rows="3" placeholder="Comment…"></textarea>
+  <div class="hint"><kbd>Enter</kbd> save · <kbd>Shift+Enter</kbd> newline · <kbd>Esc</kbd> cancel<span id="c-del"> · <kbd>⌘⌫</kbd> remove</span></div>
+</div>
+<div id="modal" hidden><div class="box"><div id="m-body"></div></div></div>
+<div id="toast" hidden></div>
+<script type="module" src="/app.js"></script>
+</body>
+</html>
