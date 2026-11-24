@@ -1,0 +1,13 @@
+id = "annotator"
+name = "Annotator"
+version = "0.1.0"
+min_herdr_version = "0.8.0"
+description = "Review the focused agent's last message in annotator and send the feedback back to it."
+platforms = ["macos", "linux"]
+
+[[actions]]
+id = "last"
+title = "Annotator: agent's last message"
+description = "Open the focused agent's most recent message in annotator; on Finish the feedback is sent to the agent as its next prompt."
+contexts = ["pane"]
+command = ["bash", "last.sh"]

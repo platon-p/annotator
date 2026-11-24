@@ -40,3 +40,23 @@ Cmd+arrows to line/document boundary. Keys match by position, so they work in an
 - Anchor = quoted text + source line(s) (located heuristically in the markdown source).
 - Raw HTML inside the markdown is escaped, not rendered.
 - Not in MVP: stdin/multiple files, persistence of unfinished sessions (closing the tab asks for confirmation; the CLI keeps waiting), custom labels.
+
+## herdr integration
+
+`herdr/` is a [herdr](https://herdr.dev) plugin: a shortcut opens annotator on the focused agent's last message, and Finish sends the feedback back to that agent as its next prompt (`herdr agent prompt`). Discard, or Finish without annotations, sends nothing.
+
+```sh
+herdr plugin link "$PWD/herdr"
+```
+
+Bind a key in `~/.config/herdr/config.toml`, then `herdr server reload-config`:
+
+```toml
+[[keys.command]]
+key = "prefix+shift+a"
+type = "plugin_action"
+command = "annotator.last"
+description = "Review agent reply in annotator"
+```
+
+The last message is read by `plannotator-tui last` (from the herdr-annotate plugin, `~/.local/share/herdr/annotate-local/bin/plannotator-tui.exe`; override with `ANNOTATOR_LAST_CMD`). Needs `jq` and `npm install` in this repo (bun is a local dev dependency).
