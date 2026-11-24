@@ -1,0 +1,21 @@
+{
+  "name": "annotator",
+  "version": "0.1.0",
+  "description": "Review a markdown file in the browser, annotate it from the keyboard, get feedback on stdout.",
+  "type": "module",
+  "bin": {
+    "annotator": "src/cli.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "start": "bun src/cli.ts"
+  },
+  "dependencies": {
+    "marked": "^18.3.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.5",
+    "bun": "^1.4.5",
+    "puppeteer-core": "^25.18.1"
+  }
+}
