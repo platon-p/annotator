@@ -12,15 +12,16 @@ pane="${HERDR_PANE_ID:-}"
 [ -n "$pane" ] || fail "no focused pane"
 [ -x "$bun" ] || fail "bun not found at $bun (run npm install in $root)"
 
-session="$("$herdr" pane get "$pane" | jq -r '.result.pane.agent_session // empty')"
-agent="$(jq -r '.agent // empty' <<<"$session")"
-sid="$(jq -r '.value // empty' <<<"$session")"
-[ -n "$agent" ] && [ -n "$sid" ] || fail "pane $pane has no agent session"
+info="$("$herdr" pane get "$pane" | jq '.result.pane')"
+agent="$(jq -r '.agent // empty' <<<"$info")"
+sid="$(jq -r '.agent_session.value // empty' <<<"$info")"
+cwd="$(jq -r '.foreground_cwd // .cwd // empty' <<<"$info")"
+[ -n "$agent" ] || fail "no agent in pane $pane"
 
 dir="${HERDR_PLUGIN_STATE_DIR:-${TMPDIR:-/tmp}}"
 mkdir -p "$dir"
 msg="$dir/agent-last-message.md"
-"$bun" "$root/src/last-message.ts" "$agent" "$sid" >"$msg" 2>"$dir/last.err" \
+"$bun" "$root/src/last-message.ts" "$agent" --session "$sid" --cwd "$cwd" >"$msg" 2>"$dir/last.err" \
   || fail "cannot read last message: $(head -c 300 "$dir/last.err")"
 [ -s "$msg" ] || fail "last message is empty"
 

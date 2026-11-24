@@ -42,15 +42,40 @@ function parse(line: string): any {
   }
 }
 
+export interface SessionRef {
+  /** Exact session id when herdr knows it. */
+  sessionId?: string;
+  /** Pane working directory; used to pick the newest session when the id is unknown. */
+  cwd?: string;
+}
+
 /** Reads the last assistant message of an agent session; null when there is none. */
-export async function readLastMessage(agent: string, sessionId: string): Promise<string | null> {
-  if (!/^[\w-]+$/.test(sessionId)) throw new Error(`bad session id: ${sessionId}`);
+export async function readLastMessage(agent: string, ref: SessionRef): Promise<string | null> {
+  try {
+    return await readExact(agent, ref);
+  } catch (e) {
+    // herdr can hold a session id that has no transcript on disk; fall back to the newest one in the cwd.
+    if (!ref.sessionId || !ref.cwd) throw e;
+    return readExact(agent, { cwd: ref.cwd });
+  }
+}
+
+async function readExact(agent: string, ref: SessionRef): Promise<string | null> {
+  const { sessionId, cwd } = ref;
+  if (sessionId && !/^[\w-]+$/.test(sessionId)) throw new Error(`bad session id: ${sessionId}`);
+  if (!sessionId && !cwd) throw new Error("need a session id or a cwd");
   if (agent === "claude") {
-    const file = await find(join(homedir(), ".claude/projects"), `*/${sessionId}.jsonl`);
+    const root = join(homedir(), ".claude/projects");
+    const file = sessionId
+      ? await newest(root, `*/${sessionId}.jsonl`)
+      : await newest(join(root, cwd!.replace(/[^A-Za-z0-9]/g, "-")), "*.jsonl");
     return lastClaudeMessage(await Bun.file(file).text());
   }
   if (agent === "codex") {
-    const file = await find(join(homedir(), ".codex/sessions"), `**/*-${sessionId}.jsonl{,.zst}`);
+    const root = join(homedir(), ".codex/sessions");
+    const file = sessionId
+      ? await newest(root, `**/*-${sessionId}.jsonl{,.zst}`)
+      : await newestCodexIn(root, cwd!);
     const text = file.endsWith(".zst")
       ? await new Response(Bun.spawn(["zstd", "-dc", file], { stdout: "pipe" }).stdout).text()
       : await Bun.file(file).text();
@@ -59,19 +84,42 @@ export async function readLastMessage(agent: string, sessionId: string): Promise
   throw new Error(`unsupported agent: ${agent}`);
 }
 
-async function find(root: string, pattern: string): Promise<string> {
-  for await (const f of new Glob(pattern).scan({ cwd: root, absolute: true })) return f;
-  throw new Error(`no ${pattern} under ${root}`);
+async function candidates(root: string, pattern: string) {
+  const out: { file: string; mtime: number }[] = [];
+  for await (const file of new Glob(pattern).scan({ cwd: root, absolute: true })) {
+    out.push({ file, mtime: (await Bun.file(file).stat()).mtimeMs });
+  }
+  return out.sort((a, b) => b.mtime - a.mtime).map((c) => c.file);
+}
+
+async function newest(root: string, pattern: string): Promise<string> {
+  const [f] = await candidates(root, pattern);
+  if (!f) throw new Error(`no ${pattern} under ${root}`);
+  return f;
+}
+
+/** Newest live Codex rollout whose session_meta.cwd is `cwd`. */
+async function newestCodexIn(root: string, cwd: string): Promise<string> {
+  for (const file of (await candidates(root, "**/rollout-*.jsonl")).slice(0, 300)) {
+    const head = await Bun.file(file).slice(0, 8192).text();
+    const m = head.match(/"cwd":("(?:[^"\\]|\\.)*")/);
+    if (m && JSON.parse(m[1]) === cwd) return file;
+  }
+  throw new Error(`no recent codex session for ${cwd}`);
 }
 
 if (import.meta.main) {
-  const [agent, sessionId] = process.argv.slice(2);
-  if (!agent || !sessionId) {
-    console.error("usage: last-message.ts <claude|codex> <session-id>");
+  const [agent, ...rest] = process.argv.slice(2);
+  const opt = (name: string) => {
+    const i = rest.indexOf(name);
+    return i < 0 ? undefined : rest[i + 1] || undefined;
+  };
+  if (!agent || (!opt("--session") && !opt("--cwd"))) {
+    console.error("usage: last-message.ts <claude|codex> [--session ID] [--cwd DIR]");
     process.exit(2);
   }
   try {
-    const msg = await readLastMessage(agent, sessionId);
+    const msg = await readLastMessage(agent, { sessionId: opt("--session"), cwd: opt("--cwd") });
     if (!msg) {
       console.error("no assistant message in the session");
       process.exit(1);
