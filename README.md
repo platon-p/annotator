@@ -59,4 +59,4 @@ command = "annotator.last"
 description = "Review agent reply in annotator"
 ```
 
-The last message is read by `plannotator-tui last` (from the herdr-annotate plugin, `~/.local/share/herdr/annotate-local/bin/plannotator-tui.exe`; override with `ANNOTATOR_LAST_CMD`). Needs `jq` and `npm install` in this repo (bun is a local dev dependency).
+The last message is read from the agent's own transcript by `src/last-message.ts` (Claude Code and Codex). Needs `jq` and `npm install` in this repo (bun is a local dev dependency); `zstd` for archived Codex sessions.
